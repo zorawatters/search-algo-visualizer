@@ -10,13 +10,13 @@ import numpy as np
 from pygame.locals import *
 
 # using constants for colors 
-SAND = (217, 168, 143) #for options background
+SAND = (217, 168, 143) #for nodes searched
 CREAM = (249, 227, 203) #for grid
-GRAY = (117, 112, 112)
+GRAY = (117, 112, 112) #for terminal nodes
 BRICK = (176, 102, 96) #for obstacles
 BLACK = (0, 0, 0) #for final path
-BLUE = (174, 187, 199) #for searching path
-SKY = (160, 187, 199) #for replaced nodes
+BLUE = (174, 187, 199) #for options screen?
+SKY = (160, 187, 199)  
 PINK = (234, 195, 184) #for endpoints
 WHITE = (255, 255, 255)
 
@@ -75,6 +75,7 @@ class Node: #this is going to represent a square in the grid
 
     def change_color(self, chosen_color):
         self.color = chosen_color
+        pygame.display.update()
         
     def draw(self):
         pygame.draw.rect(window, self.color, (self.x, self.y, self.width, self.width))
@@ -166,24 +167,27 @@ class PQ:
     def __init__(self, start, cost):
         self.states = {} #keeps track of lowest cost to each state
         self.q = [] #this is the heap queue. is a set of (cost, state) tuples to represent elements on the frontier
-        self.add(start, cost) #initialize that baby
+        self.index = 0 #using to get through object comparison barrier
+        self.add(start, cost, self.index) #initialize that baby
 
-    def add(self, state, cost):
-        heapq.heappush(self.q, (cost, state)) #heapq is the priority queue algorithm so using it will maintain the heap invariant (each node smaller than children)
+    def add(self, state, cost, index):
+        self.index = index
+        heapq.heappush(self.q, (cost, self.index, state)) #heapq is the priority queue algorithm so using it will maintain the heap invariant (each node smaller than children)
         self.states[state] = cost #add and set cost for new state
 
 
     def pop(self):
-        print("in pop: ", self.q)
-        (cost, state) = heapq.heappop(self.q)  # get cost of getting to explored state (heappop returns the smallest item from heap, ie the lowest cost)
+       # print("in pop: ", self.q)
+        (cost, self.index, state) = heapq.heappop(self.q)  # get cost of getting to explored state (heappop returns the smallest item from heap, ie the lowest cost)
         self.states.pop(state) #not the same pop function. removing state from frontier
         return(cost, state)
 
     def replace(self, state, cost): #replace the lowest cost to the next state if we find one
         self.states[state] = cost #replace cost
-        for i, (oldcost, oldstate) in enumerate(self.q): #look through the frontier
+        for i, (oldcost, index, oldstate) in enumerate(self.q): #look through the frontier
             if oldstate == state and oldcost > cost: #replace there too
-                self.q[i] = (cost, state)
+                old_i = index
+                self.q[i] = (cost, old_i, state)
                 heapq._siftdown(self.q, 0, i) # now i is posisbly out of order; restore
         return
 
@@ -201,35 +205,37 @@ class A_Star():
         explored = {} 
         g_scores = {node: float("inf") for row in self.grid for node in row} #setting high path costs to be overridden later
         g_scores[origin] = 0
+        index = 1
         while frontier:
             for event in pygame.event.get():
                 if event.type == QUIT: #if the user clicked the window close button
                     pygame.quit()
-            print("before pop: ", frontier.q)
             current_node = frontier.pop()
-            print("node position: ", current_node[1].get_position())
+            #print("node position: ", current_node[1].get_position())
             if current_node[1].is_goal():
+                current_node[1].change_color(PINK)
+                self.retrace_path(previous, current_node[1])
                 return True
-            print("adjacent nodes: ", current_node[1].adjacent)
             for adj in current_node[1].adjacent:
-                print("adjacent node: ", adj)
                 g_next = g_scores[current_node[1]] + 1 #since each move has a cost of 1
                 if g_next < g_scores[adj]: #if the score to the adjacent node is less than previously recorded
+                   # print("g score from current node to ", adj.get_position(), " : ", g_next)
                     g_scores[adj] = g_next
                     newcost = g_next + self.heuristic_max(adj.get_position(), goal.get_position())
                     if (adj not in explored) and (adj not in frontier.states):
-                        print("adding adjacent")
-                        frontier.add(adj, newcost) #adding f score to priority queue
-                        previous[adj] = current_node
-                        adj.change_color(BLUE)
+                        index += 1
+                        frontier.add(adj, newcost, index) #adding f score to priority queue
+                        previous[adj] = current_node[1]
+                        adj.change_color(SAND) #this will color all nodes added sand
                     elif (adj in frontier.states) and (frontier.states[adj] > newcost):
-                        print("replacing adjacent")
                         frontier.replace(adj, newcost) 
-                        previous[adj] = current_node
-                        adj.change_color(SKY)
-            if current_node[1] != self.origin:
+                        previous[adj] = current_node[1]
+            
+            if current_node[1] != self.origin: # colors nodes that we search and determine we are done searching from and will not go back into the frontier
                 current_node[1].change_color(GRAY)
                 current_node[1].visited = True
+                
+        return True
 
     def heuristic_max(self, state, goal):
         cols = abs(goal[0] - state[0])
@@ -238,6 +244,14 @@ class A_Star():
         x2=np.array(goal)
         euc = np.sqrt(np.sum((x1-x2)**2))
         return max(cols, rows, euc)
+
+    def retrace_path(self, prev, state):
+        if state is None:
+            return []
+        if state != self.origin and state != self.goal:
+            state.change_color(BLACK)
+        return self.retrace_path(prev, prev[state])+[state]
+
 
 
 grid = Grid(20, SCREEN_WIDTH)
@@ -280,7 +294,7 @@ while running:
                 curr_node.change_color(BRICK)
 
         if event.type == KEYDOWN:
-            if event.key == K_r and not started:
+            if event.key == K_r:
                 grid.reset_grid()
                 origin = None
                 goal = None
@@ -292,6 +306,7 @@ while running:
                 print("starting search")
                 grid.start_search('astar', origin, goal)
 
-#THINGS TO DO: remove grid coordinates from functions
+
+#THINGS TO DO: remove grid coordinates from functions, do path callback
 
 pygame.quit()
