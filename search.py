@@ -150,6 +150,8 @@ class Grid:
         #print(grid.grid_coordinates)
         print("in grid")
         A_Star(self.grid, origin, goal)
+        print("finished")
+        return
         
 #using strategy pattern to determine algorithm actions
 
@@ -210,12 +212,16 @@ class A_Star():
             for event in pygame.event.get():
                 if event.type == QUIT: #if the user clicked the window close button
                     pygame.quit()
+
+
             current_node = frontier.pop()
             #print("node position: ", current_node[1].get_position())
             if current_node[1].is_goal():
                 current_node[1].change_color(PINK)
                 self.retrace_path(previous, current_node[1])
-                return True
+                print("finished")
+                return
+
             for adj in current_node[1].adjacent:
                 g_next = g_scores[current_node[1]] + 1 #since each move has a cost of 1
                 if g_next < g_scores[adj]: #if the score to the adjacent node is less than previously recorded
@@ -234,8 +240,8 @@ class A_Star():
             if current_node[1] != self.origin: # colors nodes that we search and determine we are done searching from and will not go back into the frontier
                 current_node[1].change_color(GRAY)
                 current_node[1].visited = True
-                
-        return True
+
+        return
 
     def heuristic_max(self, state, goal):
         cols = abs(goal[0] - state[0])
@@ -247,6 +253,7 @@ class A_Star():
 
     def retrace_path(self, prev, state):
         if state is None:
+            print("finished retrace")
             return []
         if state != self.origin and state != self.goal:
             state.change_color(BLACK)
@@ -261,6 +268,7 @@ running = True
 origin = None
 goal = None
 started = False
+solved = False
 
 
 while running:
@@ -289,24 +297,29 @@ while running:
                 curr_node.goal = True
                 curr_node.change_color(PINK)
                 goal = curr_node
-            elif curr_node not in (goal, origin):
+            elif curr_node not in (goal, origin) and not solved:
                 curr_node.obstacle = True
                 curr_node.change_color(BRICK)
 
         if event.type == KEYDOWN:
-            if event.key == K_r:
-                grid.reset_grid()
-                origin = None
-                goal = None
-            elif event.key == K_SPACE and not started:
+            if event.key == K_SPACE and not started:
                 started = True
                 for row in grid.grid: #setting the adjacent nodes in the grid
                     for node in row:
                         node.fill_adjacent(grid)
                 print("starting search")
                 grid.start_search('astar', origin, goal)
+                started = False
+                solved = True
+                print("back to event loop")
+
+            if event.key == K_r and not started:
+                grid.reset_grid()
+                origin = None
+                goal = None
+                solved = False
 
 
-#THINGS TO DO: remove grid coordinates from functions, do path callback
+#THINGS TO DO: remove grid coordinates from functions, add bfs/dfs, manage event loop so that you can reset after search
 
 pygame.quit()
