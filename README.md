@@ -35,3 +35,6 @@ As of right now, there is a singular A_Star class that runs the search and deter
  * **Sand:** Terminal Nodes (i.e. the nodes the algorithm decided to remove from the open set/frontier)
  * **Black:** Final Path Found
  
+# Example
+
+![Gif of visualizer](https://github.com/zorawatters/search-algo-visualizer/blob/master/viso_gif.gif)
