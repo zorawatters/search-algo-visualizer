@@ -1,7 +1,7 @@
 # Search Algorithm Visualizer
 
 ## What is this?
-This project is meant to show how different algorithms behave when tring to find a path from one point to another. As of right now, only A* is availale, and commands are done entirely through the keyboard, aside from picking start/endpoints and placing barriers. 
+This project is meant to show how different algorithms behave when trying to find a path from one point to another. As of right now, only A* is availale, and commands are done entirely through the keyboard, aside from picking start/endpoints and placing barriers. 
 I used pygame to create the user interface and grid for searching. The only valid moves are Up, Down, Left, and Right, all with a step cost of 1.
 
 ## Structure
